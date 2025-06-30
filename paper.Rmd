@@ -1,0 +1,55 @@
+---
+title: "paper"
+author: "Yiliu Cao"
+date: "2025-06-30"
+output:
+  pdf_document:
+    number_sections: true
+geometry: margin=1in
+# fontsize: 12pt
+# bibliography: references.bib
+# csl: apa.csl
+---
+
+# Introduction
+
+# Causal Interactions
+In the usual setting where we have a single binary treatment $A$, we use $P(Y=1|A=a)$ to denote the probability of outcome under treatment $a$. However, in causal interactions, there are at least two exposures in casual interactions. We will only focus on two binary exposures, denoted as $G$ and $E$. We will introduce causal interactions across different sections, as outlined below.
+
+## Measurements and Scales
+
+Let $Y$ denotes the binary outcome of interest, and let $\mathcal{T}$ denote the exposures of interest. In this paper, we assume there are only two binary exposures such that $\mathcal{T}=\{G,E\}$. Denote $Y^t$ as the potential outcome of receiving $\mathcal{T}=t$. Under the assumption of consistency ($Y=Y^t$) and exchangebility ($T\perp Y^t$), $\mathbb{E}[Y^t]=\mathbb{E}[Y^t|G=g,E=e]=\mathbb{E}[Y|G=g,E=e]=p(Y=1|G=g,E=e)$. Denote $p_{ge}=p(Y=1|G=g,E=e)$ be the probability of outcome of receiving $G=g$ and $E=e$, then the risk difference, $RD$, is defined as
+$$
+\begin{aligned}
+RD &= \left(p_{11} - p_{00}\right) - \left[\left(p_{10} - p_{00}\right) + \left(p_{01} - p_{00}\right)\right]\\ 
+&= p_{11} - p_{10} - p_{01} + p_{00}
+\end{aligned}
+$$
+where we refer $p_{11} - p_{10} - p_{01} + p_{00}$ as additive interaction. If $RD>0$, the additive interaction is said to be "super-additive", and "sub-additive" when $RD<0$. Correspondingly, risk ratios $RR$ and odds ratio $OR$ are defined as multiplicative interaction as $RR=\frac{RR_{11}}{RR_{10}RR_{01}},\:OR=\frac{OR_{11}}{OR_{10}OR_{01}}$ where $RR_{ij}=p_{ij}/p_{00}$, $OR_{ij}=\frac{p_{ij}/(1-p_{ij})}{p_{00}/(1-p_{00})}$ [@vanderweelebook, p.254]. 
+
+In this research, our target is to access the additive interaction showing above, especially when risks $p_{ge}$ are not available. If we divide $p_{00}$ from above, we have
+$$
+\frac{1}{p_{00}}(p_{11} - p_{10} - p_{01} + p_{00})=RR_{11}-RR_{10}-RR_{01}+1
+$$
+which is referred as "relative excess risk due to interaction"  in relative risk scale or "$RERI_{RR}$". It can be used to conduct the same inference but use relative risks instead of risks. For example, $RERI_{RR}>0$ if and only if $p_{11} - p_{10} - p_{01} + p_{00}>0$. In addition, under the rare diseases, $OR_{ge}=\frac{p_{11}/(1-p_{11})}{p_{00}/(1-p_{00})}\approx\frac{p_{11}}{p_{00}}=RR_{ge}$, then
+$$
+\begin{aligned}
+RERI_{RR}&=RR_{11}-RR_{10}-RR_{01}+1\\
+&\approx OR_{11}-OR_{10}-OR_{01}+1=RERI_{OR}
+\end{aligned}
+$$
+
+While multiplicative interaction like $RR$ and $OR$ provide us insights, our primary interest often lies in detecting additive interactions (reasons will be discussed in the next section). Even we only observe $RR$, additive interaction can still be estimated by dividing $p_{00}$, a measure known as *relative excess risk due to interaction RERI* based on RR [@vanderweelebook, p.250; @lee2013, p.1]. Furthermore, when the outcome is rare, additive interaction can be approximated using $OR$. However, although $RERI_{RR}$ or $RERI_{OR}$ gives us the direction of additive interaction, it tells us nothing about the magnitude of the additive interaction of risks unless we know $p_{00}$ [@vanderweelebook, p.255]. More details will be **discussed in limitation part.**
+
+## Statistical and Causal Interaction
+In practice, interactions between two variables are evaluated using statistical models by including a product term between them. Similarly, both additive and multiplicative interactions can be estimated using generalized linear models (GLMs) by selecting an appropriate canonical link function $g$. Controlling for covariates $\boldsymbol{C}$, the GLM is expressed as:
+$$
+g(P(Y=1 | G=g, E=e, \boldsymbol{C}=\boldsymbol{c}))=\eta=\beta_0+\beta_1 g+\beta_2 e+\beta_3 eg+ \boldsymbol{\beta_4}\boldsymbol{c}
+$$
+For instance, if we choose the logit link, we have that $e^{\beta_0}=p_{00},\:e^{\beta_1}=R R_{10},\: e^{\beta_2}=R R_{01},\:e^{\beta_3}=R R_{11} /\left(R R_{10} R R_{01}\right)$. In case of identity or logit link, for example, we would have $e^{\beta_3}=OR_{11} /\left(OR_{10} OR_{01}\right)$ and $\beta_3=p_{11}-p_{10}-p_{01}+p_{00}$, respectively [@vanderweelebook, p.258].
+
+As noted above, additive interaction is often considered more important than multiplicative interaction. This is because the additive interaction incorporates the difference scale, which is particularly useful for assessing the impact of public health interventions [@rothman1980]. For instance, in a subgroup of the population, a larger $RD$ indicates a greater number of individuals whose disease is prevented or cured. This provides more information for identifying the most effective interventions [@greenland2008]. Moreover, additive interaction is closer related to the test for mechanistic interaction than the multiplicative one [@greenland2008]. It can also provide us with information when detecting synergism between two component exposure in a sufficient cause framework [@rothman1976]. We will discuss this in more detail in Section 3.
+
+However, using statistical interaction is far not enough to estimate the additive causal interaction. One significant issue is that the models are unconstrained with identity and log-linear links, with the predicted probabilities falling outside the valid range of $(0,1)$ [@vanderweelebook, pp.258-259]. Additionally, these two links always turn into the convergence problem in MLE, especially when incorporating the covariates. This may also result in inaccurate estimates and increase the computational cost. Furthermore, as noted above, even though we can easily estimate $OR$ using statistical interaction, $OR$ only approximates $RR$ when the outcome is rare. These all make estimating the additive causal interaction more complex than simply fitting a statistical interaction model.
+
+Lastly, we want to determine whether the estimated effects reflect causal relationships rather than mere associations. This requires to consider the set of confounders for each exposure separately. Let's consider we have controlled the confounders of our primary exposure $G$ but not control for the secondary exposure $E$. If the effect of $G$ differs from the strata classified by $E$, then we conclude with the effect of the modification. Nevertheless, we can not claim that $E$ is indeed the effect modifier as we do not know whether the effect of the modification is caused by $E$ or some other factors relating to $E$ [@vanderweele2007]. In contrast, if we control for two sets of confounding factors, then the coefficient of the interaction term can, therefore, be interpreted as the causal interaction as the observed interaction is not confounded by external factors that may independently influence the relationship between the exposures and the outcome [@vanderweele2009_interaction].
