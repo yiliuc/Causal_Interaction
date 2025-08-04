@@ -1,0 +1,125 @@
+---
+output: pdf_document
+---
+```{r, echo=FALSE, message=FALSE}
+library(purrr)
+results_control <- get(load("outputs/simulation_data/3000_control_reri.Rdata")[1])
+results_both <- get(load("outputs/simulation_data/3000_both_reri.Rdata")[1])
+results_control_all <- get(load("outputs/simulation_data2/3000_control_reri.Rdata")[1])
+results_both_all <- get(load("outputs/simulation_data2/3000_both_reri.Rdata")[1])
+source("scripts/summary_table/summary_fitting_once.R")
+source("scripts/summary_table/summary_fitting_Btimes.R")
+source("scripts/kable_graph/making_kable.R")
+source("scripts/kable_graph/bias_graph.R")
+```
+
+# Testing different models (fitting one time)
+
+## Using control only
+
+### $\beta_0=-6$: prevalence $\approx0.01$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -6, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -6)
+```
+
+### $\beta_0=-4.5$: prevalence $\approx0.05$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -4.5, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -4.5)
+```
+
+
+\newpage
+
+
+### $\beta_0=-3.7$: prevalence $\approx0.1$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3.7, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3.7)
+```
+
+### $\beta_0=-3$: prevalence $\approx0.2$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3)
+```
+
+
+\newpage
+
+
+### $\beta_0=-2$: prevalence $\approx0.4$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -2, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -2)
+```
+
+### $\beta_0=-1$: prevalence $\approx0.6$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -1, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -1)
+```
+
+
+\newpage
+
+
+## Using both control and case
+
+### $\beta_0=-6$: prevalence $\approx0.01$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -6, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -6)
+```
+
+
+### $\beta_0=-4.5$: prevalence $\approx0.05$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -4.5, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -4.5)
+```
+
+
+\newpage
+
+
+### $\beta_0=-3.7$: prevalence $\approx0.1$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3.7, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3.7)
+```
+
+### $\beta_0=-3$: prevalence $\approx0.2$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3)
+```
+
+
+\newpage
+
+
+### $\beta_0=-2$: prevalence $\approx0.4$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -2, use = "both")$summary_table
+make_reri_table(sumamry_table, beta0 = -2)
+```
+
+### $\beta_0=-1$: prevalence $\approx0.6$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -1, use = "both")$summary_table
+make_reri_table(sumamry_table, beta0 = -1)
+```

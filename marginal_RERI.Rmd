@@ -1,0 +1,80 @@
+---
+author: "Yiliu Cao"
+date: "2025-07-01"
+output: pdf_document
+---
+Given the true data-generation model
+$$
+\begin{aligned}
+\text{logit}(p(Y=1 \mid G, E, \mathbf{X})) &= \beta_0 + \boldsymbol{\gamma}^\top\mathbf{x} + 0.3g + 0.4e + 0.8ge\\
+&=\eta_{ge}(\mathbf{x})
+\end{aligned}
+$$
+The true (marginal) $\text{RERI}_{OR}$ are different with empirical ones as shown as following
+
+
+# True (Marginal) $\text{RERI}_{OR}$ from the data generation process
+
+Denote $p_{ge}(x)=p(Y=1|G=g,E=e,X=x)$, $\text{OR}_{11}$ can be expressed as
+$$
+\begin{aligned}
+\text{OR}_{11} &= \frac{p_{11}(x)/(1-p_{11}(x))}{p_{00}(x)/(1-p_{00}(x))}\\
+&=\frac{\exp\{\eta_{11}(\mathbf{x})\}}{\exp\{\eta_{00}(\mathbf{x})\}}\\
+&=e^{0.3+0.4+0.8}\frac{\exp\{\eta_{00}(\mathbf{x})\}}{\exp\{\eta_{00}(\mathbf{x})\}}\\
+&=e^{0.3+0.4+0.8}
+\end{aligned}
+$$
+Similarly, we can have
+$$
+\text{OR}_{10} = e^{0.3}
+$$
+
+$$
+\text{OR}_{01} = e^{0.4}
+$$
+Hence the (marginal) $\text{RERI}_{OR}$ can be expressed as
+$$
+\text{RERI}_{OR} = e^{0.3 + 0.4 + 0.8} - e^{0.3} - e^{0.4} + 1\approx2.64
+$$
+
+# Empirical (crude) risks and odds from a simulation of 1 million
+
+Define the marginal risk as
+$$
+p_{ge}^c = P(Y=1 | G=g, E=e)
+$$
+which can be expressed as
+$$
+\begin{aligned}
+p_{ge}^c &= \int_\mathcal{X} P(Y=1,X=x | G, E)dx\\
+&=\int_\mathcal{X} P(Y=1 | G, E, X=x) \, f_{X|G,E}(x) \, dx\\
+&=\mathbb{E}_{X|G,E}[p(Y=1|G,E,X)]\\
+&=\mathbb{E}_{X|G,E}\left[\frac{\exp\{\eta_{ge}(X)\}}{1+\exp\{\eta_{ge}(X)\}}\right]
+\end{aligned}
+$$
+Consequently
+$$
+\begin{aligned}
+\text{odds}_{ge} &= \frac{p_{ge}^c}{1 - p_{ge}^c}\\
+&=\frac{\mathbb{E}_{X|ge}\left[\frac{\exp\{\eta_{ge}(X)\}}{1+\exp\{\eta_{ge}(X)\}}\right]}{\mathbb{E}_{X|ge}\left[\frac{1}{1+\exp\{\eta_{ge}(X)\}}\right]}
+\end{aligned}
+$$
+For example, for $\text{OR}_{11}=\text{odds}_{11}/\text{odds}_{00}$, 
+$$
+\begin{aligned}
+\text{odds}_{11}&=\frac{\mathbb{E}_{X|11}\left[\frac{\exp\{\eta_{11}(X)\}}{1+\exp\{\eta_{11}(X)\}}\right]}{\mathbb{E}_{X|11}\left[\frac{1}{1+\exp\{\eta_{11}(X)\}}\right]}\\
+&=e^{0.3+0.4+0.8}\frac{\mathbb{E}_{X|11}\left[\frac{\exp\{\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}{1+\exp\{1.5+\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}\right]}{\mathbb{E}_{X|11}\left[\frac{1}{1+\exp\{1.5+\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}\right]}\\
+\text{odds}_{00}&=\frac{\mathbb{E}_{X|00}\left[\frac{\exp\{\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}{1+\exp\{\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}\right]}{\mathbb{E}_{X|00}\left[\frac{1}{1+\exp\{\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}\right]}
+\end{aligned}
+$$
+Clearly $\text{odds}_{11}/\text{odds}_{00}\neq\exp\{0.3+0.4+0.8\}$, and thence the empirical estimated $\widehat{RERI}_{OR}$ is not equal to 2.64 even in 1 million simulation.
+
+However, when the outcome is getting rarer, then $odds=\frac{p^c_{ge}}{1-p^c_{ge}}\approx p^c_{ge}$. Therefore,
+$$
+\begin{aligned}
+\text{odds}_{11}&\approx\mathbb{E}_{X|11}\left[\frac{\exp\{\eta_{11}(X)\}}{1+\exp\{\eta_{11}(X)\}}\right]\\
+&=e^{0.3+0.4+0.8}\mathbb{E}_{X|11}\left[\frac{\exp\{\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}{1+\exp\{1.5+\beta_0 + \boldsymbol{\gamma}^\top\mathbf{x}\}}\right]\\
+\text{odds}_{00}&\approx\mathbb{E}_{X|00}\left[\frac{\exp\{\eta_{00}(X)\}}{1+\exp\{\eta_{00}(X)\}}\right]\\
+\end{aligned}
+$$
+

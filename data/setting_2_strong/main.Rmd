@@ -1,0 +1,384 @@
+---
+output:
+  pdf_document:
+    number_sections: true
+fontsize: 12pt
+header-includes:
+  - \usepackage{tikz}
+  - \usetikzlibrary{arrows.meta,shapes,positioning}
+  - \tikzset{node font = \large\bfseries\sffamily, 
+         every node/.append style = {circle, minimum size = 12mm, thick},
+         every edge/.append style = {->, very thick, shorten >= 1pt, shorten <= 1pt}}
+---
+```{r, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(MASS)
+library(kableExtra)
+source("scripts/Newton_Raphson/NR_no_covariates.R")
+source("scripts/Newton_Raphson/NR_generalized_covariates.R")
+source("scripts/optim/optim_no_covariates.R")
+source("scripts/optim/optim_generalized_covariates.R")
+source("scripts/summary_table/summary_fitting_once.R")
+source("scripts/summary_table/summary_fitting_Btimes.R")
+source("scripts/data_generation.R")
+source("scripts/MSLOM.R")
+source("scripts/DR.R")
+source("scripts/kable_graph/making_kable.R")
+```
+
+# Simulation
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+
+\node[draw, circle] (XG) at (0,2) {$\mathbf{X}_G$};
+\node[draw, circle] (C)  at (0,0) {$\mathbf{C}$};
+\node[draw, circle] (XE) at (0,-2) {$\mathbf{X}_E$};
+\node[draw, circle] (XY) at (7,0) {$\mathbf{X}_Y$};
+
+\node[draw, circle] (G)  at (2,1) {$G$};
+\node[draw, circle] (E)  at (2,-1) {$E$};
+
+\node[draw, circle] (Y)  at (4,0) {$Y$};
+
+\draw[-Latex] (XG) -- (G);
+\draw[-Latex] (XE) -- (E);
+\draw[-Latex] (C) -- (G);
+\draw[-Latex] (C) -- (E);
+\draw[-Latex] (C) -- (Y);
+\draw[-Latex] (G) -- (Y);
+\draw[-Latex] (E) -- (Y);
+\draw[-Latex] (XY) -- (Y);
+
+\end{tikzpicture}
+\caption{Directed Acyclic Graphs for causal interactions under two treatments G and E.}
+\label{fig:markov-chain}
+\end{figure}
+
+Let $G$ and $E$ denote the two binary treatments and $Y$ be the binary outcome. Let $\mathbf{X}_G$, $\mathbf{X}_E$ be the set of instrumental variables for $G$ and $E$, respectively. Let $\mathbf{X}_Y$ be the outcome-only covariates. Let $\mathbf{C}$ be the set of common confounders to both treatments.
+
+## Data generation
+
+In this study, we will assume the outcome $Y$ is binary and there are two treatments $G$ and $E$. Let $\mathbf{X}_G=\{X_1,X_2\}$, $\mathbf{X}_E=\{X_3,X_4\}$, $\mathbf{X}_Y=\{X_5,X_6\}$ and $\mathbf{C}=\{X_7,X_8\}$. Suppose $\mathbf{X}=\{X_1,\ldots,X_8\}$ is generated to follow a multivariate normal distribution such that $\mathbf{X}\sim\mathcal{N}_8(\mathbf{0}, \mathbf{I}_8)$. To generate the treatment assignment probabilities, we firstly generate probabilities for each treatment individually:
+$$
+\begin{aligned}
+& \pi_{G=1}=P(G=1 \mid \mathbf{Z}_G)=\frac{\exp\{f(\mathbf{Z}_G)\}}{1+\exp\{f(\mathbf{Z}_G)\}}\\
+& \pi_{E=1}=P(E_i=1 \mid \mathbf{Z}_E)=\frac{\exp\{f(\mathbf{Z}_E)\}}{1+\exp\{f(\mathbf{Z}_E)\}}\\
+\end{aligned}
+$$
+where $f(\mathbf{Z}_G)$ and $f(\mathbf{Z}_E)$ are the function of $\mathbf{Z}_G$ and $\mathbf{Z}_E$ such that $\mathbf{Z}_G=\{X_1,X_2,X_7,X_8\}$ and $\mathbf{Z}_E=\{X_3,X_4,X_7,X_8\}$. We now suppose $f(\mathbf{Z}_G)=0.8X_1+0.5X_2-0.3X_7+0.4X_8$ and $f(\mathbf{X}_E)=-0.5X_3+0.2X_4+0.3X_7+0.6X_8$. Note that here it is unnecessary to add the intercept as the expectation for each covariate is 0, making the marginal probabilities $\pi_{G=1}$ and $\pi_{E=1}$ are approximately 0.5. With the above setups, the probability of assignment for each combination of treatments can be computed as
+$$
+\begin{aligned}
+\theta_{00}=p_{G=0,E=0}&=(1-\pi_{G=1})(1-\pi_{E=1})\\
+\theta_{10}=p_{G=1,E=0}&=\pi_{G=1}(1-\pi_{E=1})\\
+\theta_{01}=p_{G=0,E=1}&=(1-\pi_{G=1})\pi_{E=1}\\
+\theta_{11}=p_{G=1,E=1}&=\pi_{G=1}\pi_{E=1}\\
+\end{aligned}
+$$
+For each observation, the probability of receiving each pair of treatment follows a multinomial distribution such that $T_i\mid\mathbf{X}\sim\operatorname{Multinomial}(1,\theta_{00},\theta_{10},\theta_{01},\theta_{11})$. In addition, denote $\mathbf{Z}_Y=\{\mathbf{X}_Y,\mathbf{C}\}=\{X_5,X_6,X_7,X_8\}$, the outcome is generated as
+$$
+\begin{aligned}
+\operatorname{Pr}(Y=1 \mid \mathbf{Z}_Y, G, E)=\operatorname{logit}^{-1}(&-4.5+0.3X_5-0.5X_6+0.2X_7+0.4X_8\\
+&+0.3G+0.4E+0.8GE)
+\end{aligned}
+$$
+The true value of RERI in terms of odds ratio can be computed as $\exp{0.3 + 0.4 + 0.8}-\exp{0.3}-\exp{0.4}+1=2.64$.
+```{r, include=FALSE}
+compute_RERI_OR <- function(b1, b2, b3){
+  return(exp(b1 + b2 + b3) - exp(b1) - exp(b2) + 1)
+}
+compute_RERI_OR(0.3, 0.4, 0.8)
+```
+
+```{r}
+# Generate the data
+sim_dat <- simulate_data_intercept(3000, -4.5, 2025)
+mean(sim_dat$G == 1)
+mean(sim_dat$E == 1)
+```
+
+```{r, echo=FALSE}
+sim_dat %>%
+  dplyr::group_by(G, E) %>%
+  dplyr::summarise(
+    Y0 = sum(Y == 0),
+    Y1 = sum(Y == 1),
+    .groups = "drop") %>%
+  mutate(r = Y1/(Y0 + Y1)) %>% 
+  dplyr::rename(`Y = 0` = Y0,
+         `Y = 1` = Y1,
+         `Rate` = r) %>% 
+  arrange(G, E) %>% 
+  kable(booktabs = TRUE,
+        caption = "Summary of the simulated data")
+```
+
+Table 1 shows the summary of the simulated data. We can see that the rate of $Y=1$ remains around 0.05.
+
+In addition, from the simulated data, we can also estimate the RERI in terms of risk ratio. However, it is not the true value of $RERI_{OR}$ but approaches to the true value when the sample size increases. The estimate result is around 2.01.
+```{r}
+sim_dat_large <- simulate_data_intercept(1e6, -6, 2025)
+# truth on the risk scale
+p00 <- with(sim_dat_large, mean(Y[G==0 & E==0]))
+p10 <- with(sim_dat_large, mean(Y[G==1 & E==0]))
+p01 <- with(sim_dat_large, mean(Y[G==0 & E==1]))
+p11 <- with(sim_dat_large, mean(Y[G==1 & E==1]))
+
+true_RERI_RR <- (p11 - p10 - p01 + p00) / p00
+true_RERI_RR
+
+# truth on the odds scale
+logit <- function(p) log(p/(1-p))
+OR11 <- exp(logit(p11) - logit(p00))
+OR10 <- exp(logit(p10) - logit(p00))
+OR01 <- exp(logit(p01) - logit(p00))
+true_RERI_OR <- OR11 - OR10 - OR01 + 1
+true_RERI_OR
+```
+
+```{r, }
+sim_dat <- simulate_data_intercept(3000, -6, 2025)
+fit_outcome <- glm(
+  Y ~ G * E + X5 + X6 + X7 + X8,
+  data   = sim_dat,
+  family = binomial(link = "logit")
+)
+
+summary(fit_outcome)
+compute_RERI_OR(0.06536, 0.48415, 0.54754)
+```
+
+
+\newpage
+
+
+# Testing different models (fitting one time)
+
+## Using control only
+
+### $\beta_0=-6$
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -6, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -6)
+```
+
+### $\beta_0=-4.5$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -4.5, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -4.5)
+```
+
+
+\newpage
+
+
+### $\beta_0=-3.7$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3.7, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3.7)
+```
+
+### $\beta_0=-3$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3)
+```
+
+
+\newpage
+
+
+### $\beta_0=-2$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -2, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -2)
+```
+
+### $\beta_0=-1$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -1, seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -1)
+```
+
+
+\newpage
+
+
+## Using both control and case
+
+### $\beta_0=-6$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -6, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -6)
+```
+
+
+### $\beta_0=-4.5$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -4.5, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -4.5)
+```
+
+
+\newpage
+
+
+### $\beta_0=-3.7$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3.7, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3.7)
+```
+
+### $\beta_0=-3$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -3, use = "both", seed = 2025)$summary_table
+make_reri_table(sumamry_table, beta0 = -3)
+```
+
+
+\newpage
+
+
+### $\beta_0=-2$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -2, use = "both")$summary_table
+make_reri_table(sumamry_table, beta0 = -2)
+```
+
+### $\beta_0=-1$
+
+```{r, echo=FALSE, warning=FALSE}
+sumamry_table <- fit_once(beta0 = -1, use = "both")$summary_table
+make_reri_table(sumamry_table, beta0 = -1)
+```
+
+
+\newpage
+
+
+<!-- # Testing different models (fitting 2000 times) -->
+
+<!-- ## Using control only -->
+
+
+<!-- ### $\beta_0=-6$ -->
+
+<!-- ```{r} -->
+<!-- B <- 2 -->
+<!-- ``` -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -6, B = B), beta0 = -6) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-4.5$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -4.5, B = B), beta0 = -4.5) -->
+<!-- ``` -->
+
+
+<!-- \newpage -->
+
+
+<!-- ### $\beta_0=-3.7$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -3.7, B = B), beta0 = -3.7) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-3$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -3, B = B), beta0 = -3) -->
+<!-- ``` -->
+
+
+<!-- \newpage -->
+
+
+<!-- ### $\beta_0=-2$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -2, B = B), beta0 = -2) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-1$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -1, B = B), beta0 = -1) -->
+<!-- ``` -->
+
+
+<!-- \newpage -->
+
+
+<!-- ## Using both control and case -->
+
+<!-- ### $\beta_0=-6$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -6,  -->
+<!--                            use     = "both", -->
+<!--                            B = B), beta0 = -6) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-4.5$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -4.5,  -->
+<!--                            use     = "both", -->
+<!--                            B = B), beta0 = -4.5) -->
+<!-- ``` -->
+
+
+<!-- \newpage -->
+
+
+<!-- ### $\beta_0=-3.7$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -3.7,  -->
+<!--                            use     = "both", -->
+<!--                            B = B), beta0 = -3.7) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-3$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -3,  -->
+<!--                            use     = "both", -->
+<!--                            B = B), beta0 = -3) -->
+<!-- ``` -->
+
+
+<!-- \newpage -->
+
+
+<!-- ### $\beta_0=-2$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -2,  -->
+<!--                            use = "both", -->
+<!--                            B = B), beta0 = -2) -->
+<!-- ``` -->
+
+<!-- ### $\beta_0=-1$ -->
+
+<!-- ```{r, warning=FALSE, echo=FALSE, message=FALSE} -->
+<!-- make_reri_table(fit_Btimes(beta0 = -1,  -->
+<!--                            use     = "both", -->
+<!--                            B = B), beta0 = -1) -->
+<!-- ``` -->

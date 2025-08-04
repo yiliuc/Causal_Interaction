@@ -1,0 +1,95 @@
+---
+title: "Untitled"
+author: "Yiliu Cao"
+date: "2025-06-13"
+output:
+  pdf_document:
+    number_sections: true
+---
+# Marginal Structural Linear Odds Model (MSLOM)
+
+In addition to linear odds model, the marginal structural linear odds models add the weight $w^i$ to each observation, defined as
+$$
+w^i=\frac{1}{p(G=g_i|C=c_i)}\times\frac{1}{p(E=e_i|G=g_i,C=c_i)}
+$$
+where the two denominators are fitted using the control data, $Y_i=0$, only. The model is exactly the same as the one without covariates, which is
+$$
+O_i=\operatorname{odds}_i=\exp(\beta_0)(1 + \beta_1 G_i + \beta_2 E_i + \beta_3 G_i E_i)
+$$
+where
+$$
+O_i = \frac{p_i}{1 - p_i}\Leftrightarrow p_i = \frac{O_i}{1 + O_i}, \quad p_i = p(Y_i = 1 \mid G_i = g, E_i = e)
+$$
+The only difference is the MSLOM adds the weight to each observation, the likelihood function is now: 
+$$
+\mathcal{L}(\boldsymbol{\beta}) = \prod_{i=1}^n p_i^{w_iy_i}(1 - p_i)^{w_i(1 - y_i)}
+$$
+and the log-likelihood:
+$$
+\ell(\boldsymbol{\beta}) = \sum_{i=1}^n w_i\left\{y_i \log(p_i) + (1 - y_i)\log(1 - p_i)\right\}
+$$
+It can be also written in terms of beta explicitly:
+$$
+\ell(\boldsymbol{\beta})= \sum_{i=1}^n w_i\left\{y_i \log\left(\frac{\exp(\beta_0)z_i}{1 + \exp(\beta_0)z_i}\right) + (1 - y_i) \log\left(\frac{1}{1 + \exp(\beta_0)z_i}\right)\right\}
+$$
+where
+$$
+p_i = \frac{\exp(\beta_0)z_i}{1 + \exp(\beta_0)z_i}, \quad z_i = 1 + \beta_1 G_i + \beta_2 E_i + \beta_3 G_i E_i
+$$
+
+**Score function:**
+
+Define the score vector:
+$$
+S(\boldsymbol{\beta})_j = \frac{\partial \ell(\boldsymbol{\beta})}{\partial \beta_j}
+$$
+It can be further expanded as
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial \beta_j} &= \sum_{i=1}^n w_i\left( \frac{y_i}{p_i} - \frac{1 - y_i}{1 - p_i} \right) \frac{\partial p_i}{\partial \beta_j}\\
+&= \sum_{i=1}^n w_i\frac{y_i - p_i}{p_i(1 - p_i)} \frac{\partial p_i}{\partial O_i}\frac{\partial O_i}{\partial \beta_j}\\
+&= \sum_{i=1}^n w_i\frac{r_i}{O_i} \frac{\partial O_i}{\partial \beta_j}
+\end{aligned}
+$$
+where
+$$
+r_i = y_i - p_i, \quad \frac{d p_i}{d O_i} = \frac{1}{(1 + O_i)^2}
+$$
+For each $\beta_j$, we have:
+$$
+\frac{\partial O_i}{\partial \beta_j}=\begin{cases}
+ O_i&j=0 \\
+\exp(\beta_0) G_i&j=1\\
+\exp(\beta_0) E_i&j=2\\
+\exp(\beta_0) G_i E_i&j=3
+\end{cases}
+$$
+Consequently
+$$
+S(\boldsymbol\beta)=\left(\sum_{i=1}^n w_ir_i,\quad\sum_{i=1}^n w_i\frac{r_i G_i}{z_i},\quad\sum_{i=1}^n w_i\frac{r_i E_i}{z_i},\quad\sum_{i=1}^n w_i\frac{r_i G_i E_i}{z_i}\right)^\top
+$$
+**Observed Information Matrix**
+
+The information is defined as
+$$
+\mathcal{I}(\boldsymbol\beta)_{ij} = - \frac{\partial}{\partial \beta_j} S(\boldsymbol\beta)_i
+$$
+Denote $w_i$ as
+$$
+\omega_i = \frac{w_iO_i}{(1 + O_i)^2}
+$$
+By derivations, the final $\mathcal{I}(\boldsymbol\beta)$ is written as
+$$
+I(\boldsymbol\beta) = 
+\begin{pmatrix}
+\sum \omega_i & \sum \omega_i \frac{G_i}{z_i} & \sum \omega_i \frac{E_i}{z_i} & \sum \omega_i \frac{G_i E_i}{z_i} \\
+\sum \omega_i \frac{G_i}{z_i} & \sum (\omega_i + w_ir_i) \frac{G_i^2}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{G_i E_i}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{G_i^2 E_i}{z_i^2} \\
+\sum \omega_i \frac{E_i}{z_i} & \sum (\omega_i + w_ir_i) \frac{G_i E_i}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{E_i^2}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{G_i E_i^2}{z_i^2} \\
+\sum \omega_i \frac{G_i E_i}{z_i} & \sum (\omega_i + w_ir_i) \frac{G_i^2 E_i}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{G_i E_i^2}{z_i^2} & \sum (\omega_i + w_ir_i) \frac{(G_i E_i)^2}{z_i^2}
+\end{pmatrix}
+$$
+The Newton-Raphson Algorithm can be therefore written as
+$$
+\hat{\boldsymbol{\beta}}^{(r+1)}=\hat{\boldsymbol{\beta}}^{(r)}+I\left(\hat{\boldsymbol{\beta}}^{(r)}\right)^{-1} S\left(\hat{\boldsymbol{\beta}}^{(r)}\right)
+$$
+where $I$ and $S$ are defined above.
